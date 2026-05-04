@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Address Verification — BGV Vendor Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #04122B;
+    --navy2: #0A1E42;
+    --blue: #1D6BE6;
+    --blue2: #3D85F0;
+    --cyan: #00C4E8;
+    --gold: #F0A500;
+    --white: #F5F8FF;
+    --muted: #8BA3C7;
+    --border: rgba(61,133,240,0.18);
+    --card: rgba(255,255,255,0.04);
+    --green: #00D68F;
+    --amber: #F0A500;
+    --red: #FF5757;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top:0; left:0; right:0; z-index:100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 3rem;
+    background: rgba(4,18,43,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-size:1.1rem; font-weight:700; letter-spacing:-0.02em; }
+  .logo span { color: var(--cyan); }
+  nav ul { display:flex; gap:2rem; list-style:none; }
+  nav ul a { text-decoration:none; color:var(--muted); font-size:0.85rem; font-weight:500; transition:color 0.2s; }
+  nav ul a:hover { color:var(--white); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset:0; z-index:0;
+    background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(29,107,230,0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 80% 80%, rgba(0,196,232,0.08) 0%, transparent 60%);
+  }
+  .hero-grid {
+    position: absolute; inset:0; z-index:0;
+    background-image: linear-gradient(rgba(61,133,240,0.07) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(61,133,240,0.07) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 0%, black 30%, transparent 80%);
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(0,196,232,0.1); border: 1px solid rgba(0,196,232,0.3);
+    color: var(--cyan); font-size:0.78rem; font-weight:600; letter-spacing:0.08em;
+    padding: 0.4rem 1rem; border-radius:99px; margin-bottom:1.5rem;
+    text-transform: uppercase; position:relative; z-index:1;
+    animation: fadeUp 0.6s ease both;
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 5vw, 4.2rem);
+    font-weight: 800; letter-spacing:-0.04em; line-height:1.1;
+    max-width: 820px; margin-bottom:1.5rem;
+    position:relative; z-index:1;
+    animation: fadeUp 0.7s ease 0.1s both;
+  }
+  .hero h1 em { font-style:normal; color: var(--cyan); }
+  .hero-sub {
+    font-size:1.05rem; color:var(--muted); max-width:560px; line-height:1.7;
+    position:relative; z-index:1; margin-bottom:2.5rem;
+    animation: fadeUp 0.7s ease 0.2s both;
+  }
+  .hero-ctas { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; position:relative; z-index:1; animation: fadeUp 0.7s ease 0.3s both; }
+  .btn-primary {
+    background: var(--blue); color:#fff; padding:0.75rem 1.8rem;
+    border-radius:8px; font-weight:600; font-size:0.9rem; text-decoration:none;
+    transition: all 0.2s; border:none; cursor:pointer;
+    box-shadow: 0 0 24px rgba(29,107,230,0.4);
+  }
+  .btn-primary:hover { background:var(--blue2); transform:translateY(-1px); box-shadow:0 0 32px rgba(29,107,230,0.6); }
+  .btn-outline {
+    background:transparent; color:var(--white); padding:0.75rem 1.8rem;
+    border-radius:8px; font-weight:600; font-size:0.9rem; text-decoration:none;
+    border:1px solid var(--border); transition:all 0.2s; cursor:pointer;
+  }
+  .btn-outline:hover { border-color:var(--blue2); background:rgba(29,107,230,0.1); }
+
+  .hero-stats {
+    display:flex; gap:3rem; justify-content:center; flex-wrap:wrap;
+    margin-top: 4rem; padding-top: 4rem;
+    border-top: 1px solid var(--border);
+    position:relative; z-index:1;
+    animation: fadeUp 0.7s ease 0.4s both;
+  }
+  .stat { text-align:center; }
+  .stat-n { font-size:2rem; font-weight:800; color:var(--cyan); letter-spacing:-0.03em; }
+  .stat-l { font-size:0.78rem; color:var(--muted); font-weight:500; margin-top:0.2rem; letter-spacing:0.04em; text-transform:uppercase; }
+
+  /* SECTIONS */
+  section { padding: 6rem 2rem; max-width:1200px; margin:0 auto; }
+  .section-tag {
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.72rem; color:var(--cyan); letter-spacing:0.12em;
+    text-transform:uppercase; margin-bottom:0.8rem;
+  }
+  .section-title {
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    font-weight:800; letter-spacing:-0.03em; line-height:1.15;
+    margin-bottom:1rem;
+  }
+  .section-sub { font-size:1rem; color:var(--muted); max-width:560px; line-height:1.7; margin-bottom:3rem; }
+
+  /* WORKFLOW */
+  #workflow { border-top: 1px solid var(--border); }
+  .workflow-grid {
+    display:grid; grid-template-columns: 1fr 1fr;
+    gap: 3rem; align-items:start;
+  }
+  .workflow-steps { display:flex; flex-direction:column; gap:0; }
+  .wstep {
+    display:flex; gap:1.5rem; align-items:flex-start;
+    padding: 1.5rem 0;
+    border-left: 2px solid var(--border);
+    padding-left: 2rem;
+    margin-left: 1rem;
+    position:relative;
+    transition: border-color 0.3s;
+  }
+  .wstep:hover { border-color: var(--blue); }
+  .wstep::before {
+    content: attr(data-step);
+    position:absolute; left:-1.1rem; top:1.5rem;
+    width:2rem; height:2rem; border-radius:50%;
+    background:var(--navy2); border:2px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.72rem; font-weight:700; color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .wstep:hover::before { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .wstep-icon { font-size:1.5rem; flex-shrink:0; margin-top:0.2rem; }
+  .wstep-body h4 { font-size:0.95rem; font-weight:700; margin-bottom:0.35rem; }
+  .wstep-body p { font-size:0.85rem; color:var(--muted); line-height:1.6; }
+  .wstep-body .field-chips { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.6rem; }
+  .chip {
+    font-family:'JetBrains Mono',monospace; font-size:0.68rem;
+    padding:0.2rem 0.6rem; border-radius:4px;
+    background:rgba(29,107,230,0.12); border:1px solid rgba(29,107,230,0.25);
+    color:var(--blue2);
+  }
+  .chip.green { background:rgba(0,214,143,0.1); border-color:rgba(0,214,143,0.25); color:var(--green); }
+  .chip.gold { background:rgba(240,165,0,0.1); border-color:rgba(240,165,0,0.25); color:var(--gold); }
+
+  .workflow-visual {
+    background: var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:2rem; position:sticky; top:6rem;
+  }
+  .wv-header { font-size:0.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1.5rem; }
+  .wv-field { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
+  .wv-label { font-size:0.72rem; color:var(--muted); font-weight:600; letter-spacing:0.05em; }
+  .wv-input {
+    background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    border-radius:8px; padding:0.65rem 1rem;
+    font-size:0.85rem; color:var(--white); font-family:'Sora',sans-serif;
+  }
+  .wv-input.has-val { color:var(--cyan); }
+  .wv-row { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
+  .addr-section { background:rgba(29,107,230,0.06); border:1px solid rgba(29,107,230,0.15); border-radius:10px; padding:1rem; margin-bottom:0.5rem; }
+  .addr-label { font-size:0.7rem; font-weight:700; color:var(--blue2); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.6rem; }
+  .wv-send-btn {
+    width:100%; background:var(--blue); color:#fff; border:none;
+    border-radius:8px; padding:0.9rem; font-size:0.9rem; font-weight:700;
+    cursor:pointer; margin-top:1rem; font-family:'Sora',sans-serif;
+    transition:all 0.2s; box-shadow:0 0 24px rgba(29,107,230,0.4);
+  }
+  .wv-send-btn:hover { background:var(--blue2); }
+  .wv-note { font-size:0.72rem; color:var(--muted); text-align:center; margin-top:0.7rem; }
+
+  /* VENDORS */
+  #vendors { border-top: 1px solid var(--border); }
+  .vendors-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:1.5rem; }
+  .vendor-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:1.75rem;
+    transition:all 0.3s; position:relative; overflow:hidden;
+  }
+  .vendor-card::before {
+    content:''; position:absolute; inset:0; opacity:0;
+    background:linear-gradient(135deg, rgba(29,107,230,0.08), transparent);
+    transition:opacity 0.3s;
+  }
+  .vendor-card:hover { border-color:rgba(29,107,230,0.4); transform:translateY(-2px); }
+  .vendor-card:hover::before { opacity:1; }
+  .vendor-card.top { border-color:rgba(0,196,232,0.4); }
+  .vendor-card.top::after {
+    content:'TOP PICK';
+    position:absolute; top:1rem; right:1rem;
+    font-size:0.6rem; font-weight:800; letter-spacing:0.12em;
+    color:var(--cyan); background:rgba(0,196,232,0.1); border:1px solid rgba(0,196,232,0.3);
+    padding:0.25rem 0.6rem; border-radius:99px;
+  }
+  .vendor-logo-row { display:flex; align-items:center; gap:1rem; margin-bottom:1rem; }
+  .vendor-icon {
+    width:48px; height:48px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; font-weight:800; flex-shrink:0;
+  }
+  .vendor-name { font-size:1.1rem; font-weight:800; letter-spacing:-0.02em; }
+  .vendor-sub { font-size:0.78rem; color:var(--muted); }
+  .price-badge {
+    display:inline-flex; align-items:center; gap:0.4rem;
+    background:rgba(0,214,143,0.08); border:1px solid rgba(0,214,143,0.2);
+    color:var(--green); font-size:0.82rem; font-weight:700;
+    padding:0.35rem 0.8rem; border-radius:8px; margin-bottom:1.25rem;
+  }
+  .methods { display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:1.25rem; }
+  .method-tag {
+    font-size:0.68rem; padding:0.2rem 0.55rem; border-radius:4px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--border);
+    color:var(--muted); font-weight:500;
+  }
+  .pros-cons { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem; }
+  .pc-section h5 { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem; }
+  .pc-section.pros h5 { color:var(--green); }
+  .pc-section.cons h5 { color:var(--red); }
+  .pc-list { list-style:none; display:flex; flex-direction:column; gap:0.3rem; }
+  .pc-list li { font-size:0.78rem; color:var(--muted); display:flex; gap:0.4rem; align-items:flex-start; line-height:1.4; }
+  .pc-list li::before { content:''; display:block; width:5px; height:5px; border-radius:50%; flex-shrink:0; margin-top:0.35rem; }
+  .pros .pc-list li::before { background:var(--green); }
+  .cons .pc-list li::before { background:var(--red); }
+  .contact-row {
+    display:flex; flex-wrap:wrap; gap:0.5rem; padding-top:1rem;
+    border-top:1px solid var(--border);
+  }
+  .contact-item { display:flex; align-items:center; gap:0.4rem; font-size:0.75rem; color:var(--muted); }
+  .contact-item a { color:var(--blue2); text-decoration:none; }
+  .contact-item a:hover { color:var(--cyan); }
+
+  /* MATRIX */
+  #matrix { border-top: 1px solid var(--border); }
+  .matrix-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; min-width:700px; }
+  thead th {
+    background:var(--navy2); padding:1rem 1.2rem;
+    font-size:0.8rem; font-weight:700; letter-spacing:0.04em; text-align:center;
+    border-bottom:1px solid var(--border); color:var(--muted);
+  }
+  thead th:first-child { text-align:left; color:var(--white); }
+  tbody tr { transition:background 0.15s; }
+  tbody tr:hover { background:rgba(29,107,230,0.04); }
+  tbody tr:not(:last-child) td { border-bottom:1px solid var(--border); }
+  tbody td { padding:0.85rem 1.2rem; font-size:0.83rem; }
+  tbody td:first-child { font-weight:600; color:var(--white); font-size:0.82rem; }
+  .cell-yes { color:var(--green); font-weight:700; text-align:center; }
+  .cell-par { color:var(--amber); font-weight:600; text-align:center; font-size:0.75rem; }
+  .cell-no  { color:var(--red); font-weight:600; text-align:center; }
+  .cell-cost { color:var(--cyan); font-weight:700; text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.78rem; }
+  .cell-fit-great { color:var(--green); font-weight:700; text-align:center; font-size:0.78rem; }
+  .cell-fit-good  { color:var(--amber); font-weight:600; text-align:center; font-size:0.78rem; }
+  .cell-fit-part  { color:var(--red); font-weight:600; text-align:center; font-size:0.78rem; }
+
+  /* QUESTIONS */
+  #questions { border-top: 1px solid var(--border); }
+  .q-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .q-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:1.25rem 1.5rem;
+    display:flex; gap:1rem; align-items:flex-start;
+    transition:border-color 0.2s;
+  }
+  .q-card:hover { border-color:rgba(29,107,230,0.35); }
+  .q-num {
+    font-family:'JetBrains Mono',monospace; font-size:0.75rem;
+    color:var(--blue2); font-weight:700; flex-shrink:0; padding-top:0.1rem;
+  }
+  .q-card p { font-size:0.85rem; color:var(--muted); line-height:1.6; }
+
+  /* CONTACT CTA */
+  #contact { border-top: 1px solid var(--border); }
+  .contact-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; }
+  .contact-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:1.5rem;
+    transition:all 0.2s;
+  }
+  .contact-card:hover { border-color:rgba(29,107,230,0.35); transform:translateY(-1px); }
+  .contact-card.primary { border-color:rgba(0,196,232,0.3); background:rgba(0,196,232,0.04); }
+  .cc-badge {
+    font-size:0.6rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;
+    padding:0.2rem 0.6rem; border-radius:99px; display:inline-block; margin-bottom:0.8rem;
+  }
+  .cc-badge.prim { background:rgba(0,196,232,0.1); color:var(--cyan); border:1px solid rgba(0,196,232,0.3); }
+  .cc-badge.sec { background:rgba(29,107,230,0.1); color:var(--blue2); border:1px solid rgba(29,107,230,0.25); }
+  .cc-badge.alt { background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid var(--border); }
+  .contact-card h3 { font-size:1.1rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:0.3rem; }
+  .contact-card .cc-sub { font-size:0.78rem; color:var(--muted); margin-bottom:1rem; }
+  .cc-detail { font-size:0.8rem; color:var(--muted); margin-bottom:0.3rem; }
+  .cc-detail a { color:var(--blue2); text-decoration:none; }
+  .cc-detail a:hover { color:var(--cyan); }
+  .cc-detail strong { color:var(--white); }
+
+  /* FOOTER */
+  footer {
+    border-top:1px solid var(--border); padding: 3rem 3rem;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;
+  }
+  footer p { font-size:0.78rem; color:var(--muted); }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    nav { padding:1rem; }
+    nav ul { gap:1rem; }
+    .workflow-grid { grid-template-columns:1fr; }
+    .workflow-visual { display:none; }
+    .pros-cons { grid-template-columns:1fr; }
+    .q-grid { grid-template-columns:1fr; }
+    section { padding:4rem 1.2rem; }
+    footer { flex-direction:column; text-align:center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">BGV <span>·</span> Address<span>Verify</span></div>
+  <ul>
+    <li><a href="#workflow">Workflow</a></li>
+    <li><a href="#vendors">Vendors</a></li>
+    <li><a href="#matrix">Compare</a></li>
+    <li><a href="#questions">Due Diligence</a></li>
+    <li><a href="#contact">Contacts</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-tag">🔍 BGV Vendor Assessment · May 2026</div>
+  <h1>Digital Address Verification<br><em>Vendor Guide</em></h1>
+  <p class="hero-sub">Find the right third-party platform to replace Fact Suite for address verification — one that fits exactly into your BGV workflow with your own Case IDs, GPS capture, and candidate self-verification.</p>
+  <div class="hero-ctas">
+    <a href="#vendors" class="btn-primary">View Vendors</a>
+    <a href="#workflow" class="btn-outline">See Our Workflow</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-n">6</div><div class="stat-l">Vendors Evaluated</div></div>
+    <div class="stat"><div class="stat-n">₹30–₹400</div><div class="stat-l">Cost per Case</div></div>
+    <div class="stat"><div class="stat-n">100%</div><div class="stat-l">Digital — No Field Agent</div></div>
+    <div class="stat"><div class="stat-n">&lt; 2hrs</div><div class="stat-l">Turnaround Time</div></div>
+  </div>
+</div>
+
+<!-- WORKFLOW -->
+<section id="workflow">
+  <div class="section-tag">// our workflow</div>
+  <h2 class="section-title">How Our Verification Process Works</h2>
+  <p class="section-sub">This is the exact candidate self-verification flow we need the vendor to support — from case creation in our system to the final result returned to our application.</p>
+
+  <div class="workflow-grid">
+    <div class="workflow-steps">
+
+      <div class="wstep" data-step="01">
+        <div class="wstep-icon">🗂️</div>
+        <div class="wstep-body">
+          <h4>Case Created in Our Application</h4>
+          <p>Our system generates a unique Case ID and the operator fills in the candidate details — this is the data we will send to the vendor API.</p>
+          <div class="field-chips">
+            <span class="chip">Case ID (our own)</span>
+            <span class="chip">Candidate Name</span>
+            <span class="chip">Email ID</span>
+            <span class="chip gold">Permanent Address</span>
+            <span class="chip gold">Current Address</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wstep" data-step="02">
+        <div class="wstep-icon">🔌</div>
+        <div class="wstep-body">
+          <h4>API Call to Vendor with Our Case ID</h4>
+          <p>Our application fires an API request to the vendor, passing all the above fields. Critically, our own Case ID is sent as the <code style="font-family:JetBrains Mono;font-size:0.8em;color:#3D85F0">reference_id</code> or <code style="font-family:JetBrains Mono;font-size:0.8em;color:#3D85F0">client_ref_id</code> so results map back automatically.</p>
+          <div class="field-chips">
+            <span class="chip green">reference_id = Our Case ID</span>
+            <span class="chip green">Both addresses supported</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wstep" data-step="03">
+        <div class="wstep-icon">📧</div>
+        <div class="wstep-body">
+          <h4>Vendor Sends Email to Candidate</h4>
+          <p>The vendor's system automatically sends an email to the candidate containing a unique verification link <strong>and OTP in the same email</strong>. No action needed from our ops team.</p>
+          <div class="field-chips">
+            <span class="chip">Link in email</span>
+            <span class="chip">OTP in email</span>
+            <span class="chip gold">Pre-filled address details</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wstep" data-step="04">
+        <div class="wstep-icon">📱</div>
+        <div class="wstep-body">
+          <h4>Candidate Completes Verification on Mobile</h4>
+          <p>The candidate opens the link on their phone. On <strong>iPhone → web app in Safari</strong> (no app download). On <strong>Android → native app</strong>. They enter the OTP, take a live photo of their house, and GPS is captured automatically on submit.</p>
+          <div class="field-chips">
+            <span class="chip green">iPhone = Web App (no download)</span>
+            <span class="chip green">Android = Native App</span>
+            <span class="chip">OTP entry</span>
+            <span class="chip gold">House photo (live)</span>
+            <span class="chip gold">GPS auto-captured</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wstep" data-step="05">
+        <div class="wstep-icon">🔁</div>
+        <div class="wstep-body">
+          <h4>Result Returned to Our System</h4>
+          <p>Once complete, the vendor fires a webhook to our callback URL. The payload includes our original Case ID, GPS coordinates, house photo, and verification status — automatically mapped in our application.</p>
+          <div class="field-chips">
+            <span class="chip green">Our Case ID in payload</span>
+            <span class="chip green">GPS coordinates</span>
+            <span class="chip green">House photo URL</span>
+            <span class="chip">Webhook / callback</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="workflow-visual">
+      <div class="wv-header">Sample Case Input — Your Application</div>
+      <div class="wv-field">
+        <div class="wv-label">Case ID (Generated by your system)</div>
+        <div class="wv-input has-val">BGV-2026-04821</div>
+      </div>
+      <div class="wv-row">
+        <div class="wv-field">
+          <div class="wv-label">Candidate Name</div>
+          <div class="wv-input has-val">Rajesh Kumar</div>
+        </div>
+        <div class="wv-field">
+          <div class="wv-label">Email ID</div>
+          <div class="wv-input has-val">rajesh@email.com</div>
+        </div>
+      </div>
+
+      <div class="addr-section">
+        <div class="addr-label">🏠 Permanent Address</div>
+        <div class="wv-field" style="margin-bottom:0.5rem">
+          <div class="wv-label">Address Line 1</div>
+          <div class="wv-input has-val">14, Anna Nagar, 3rd Street</div>
+        </div>
+        <div class="wv-row">
+          <div class="wv-field" style="margin-bottom:0">
+            <div class="wv-label">City</div>
+            <div class="wv-input has-val">Chennai</div>
+          </div>
+          <div class="wv-field" style="margin-bottom:0">
+            <div class="wv-label">Pincode</div>
+            <div class="wv-input has-val">600040</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="addr-section">
+        <div class="addr-label">📦 Current Address <span style="color:var(--muted);font-weight:400;font-size:0.7rem">(if different)</span></div>
+        <div class="wv-field" style="margin-bottom:0.5rem">
+          <div class="wv-label">Address Line 1</div>
+          <div class="wv-input has-val">7B, Velachery Main Road</div>
+        </div>
+        <div class="wv-row">
+          <div class="wv-field" style="margin-bottom:0">
+            <div class="wv-label">City</div>
+            <div class="wv-input has-val">Chennai</div>
+          </div>
+          <div class="wv-field" style="margin-bottom:0">
+            <div class="wv-label">Pincode</div>
+            <div class="wv-input has-val">600042</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="wv-send-btn">⚡ Initiate Verification — Send to Vendor API</button>
+      <div class="wv-note">Vendor will email the candidate with a link + OTP instantly</div>
+    </div>
+  </div>
+</section>
+
+<!-- VENDORS -->
+<section id="vendors">
+  <div class="section-tag">// vendor profiles</div>
+  <h2 class="section-title">Digital Verification Platforms</h2>
+  <p class="section-sub">All vendors below support 100% digital verification — no physical field agents. Evaluated specifically for our workflow requirements.</p>
+
+  <div class="vendors-grid">
+
+    <!-- AuthBridge -->
+    <div class="vendor-card top">
+      <div class="vendor-logo-row">
+        <div class="vendor-icon" style="background:rgba(29,107,230,0.15);color:#3D85F0;">AB</div>
+        <div>
+          <div class="vendor-name">AuthBridge</div>
+          <div class="vendor-sub">Footprints · India's largest BGV company</div>
+        </div>
+      </div>
+      <div class="price-badge">₹150 – ₹400 <span style="font-weight:400;color:var(--muted)">/ case (digital GPS)</span></div>
+      <div class="methods">
+        <span class="method-tag">GPS Triangulation</span>
+        <span class="method-tag">Live House Photo</span>
+        <span class="method-tag">Aadhaar OTP</span>
+        <span class="method-tag">DigiLocker</span>
+        <span class="method-tag">Web + Android App</span>
+      </div>
+      <div class="pros-cons">
+        <div class="pc-section pros">
+          <h5>Pros</h5>
+          <ul class="pc-list">
+            <li>Purpose-built for this exact workflow</li>
+            <li>GPS + live house photo — core feature</li>
+            <li>Web app on iPhone, no download</li>
+            <li>Multilingual incl. Tamil</li>
+            <li>ISO 27001 + SOC 2 certified</li>
+          </ul>
+        </div>
+        <div class="pc-section cons">
+          <h5>Cons</h5>
+          <ul class="pc-list">
+            <li>Premium pricing</li>
+            <li>Enterprise onboarding (2–4 wks)</li>
+            <li>Custom contract required</li>
+          </ul>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-item">🌐 <a href="https://authbridge.com" target="_blank">authbridge.com</a></div>
+        <div class="contact-item">📞 <span>+91-124-4881900</span></div>
+        <div class="contact-item">✉️ <a href="mailto:sales@authbridge.com">sales@authbridge.com</a></div>
+      </div>
+    </div>
+
+    <!-- IDfy -->
+    <div class="vendor-card">
+      <div class="vendor-logo-row">
+        <div class="vendor-icon" style="background:rgba(0,196,232,0.12);color:var(--cyan);">ID</div>
+        <div>
+          <div class="vendor-name">IDfy</div>
+          <div class="vendor-sub">Asia's TrustStack · API-first BGV platform</div>
+        </div>
+      </div>
+      <div class="price-badge">₹50 – ₹250 <span style="font-weight:400;color:var(--muted)">/ case (usage-based)</span></div>
+      <div class="methods">
+        <span class="method-tag">Aadhaar eKYC</span>
+        <span class="method-tag">Live Photo + GPS</span>
+        <span class="method-tag">DigiLocker</span>
+        <span class="method-tag">OCR Scan</span>
+        <span class="method-tag">REST API</span>
+      </div>
+      <div class="pros-cons">
+        <div class="pc-section pros">
+          <h5>Pros</h5>
+          <ul class="pc-list">
+            <li>Best API docs + Postman sandbox</li>
+            <li>Fastest median TAT — real-time</li>
+            <li>Pay-per-use, no lock-in</li>
+            <li>reference_id → your Case ID</li>
+            <li>Used by Axis Bank, HDFC, PhonePe</li>
+          </ul>
+        </div>
+        <div class="pc-section cons">
+          <h5>Cons</h5>
+          <ul class="pc-list">
+            <li>Pricing not public (must quote)</li>
+            <li>Sandbox needs support ticket</li>
+            <li>GPS/photo flow — confirm in demo</li>
+          </ul>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-item">🌐 <a href="https://idfy.com" target="_blank">idfy.com</a></div>
+        <div class="contact-item">📞 <span>+91-22-4897-5151</span></div>
+        <div class="contact-item">✉️ <a href="mailto:sales@idfy.com">sales@idfy.com</a></div>
+      </div>
+    </div>
+
+    <!-- Gridlines -->
+    <div class="vendor-card">
+      <div class="vendor-logo-row">
+        <div class="vendor-icon" style="background:rgba(0,214,143,0.1);color:var(--green);">GL</div>
+        <div>
+          <div class="vendor-name">Gridlines</div>
+          <div class="vendor-sub">by OnGrid · developer API · lowest cost</div>
+        </div>
+      </div>
+      <div class="price-badge">₹30 – ₹150 <span style="font-weight:400;color:var(--muted)">/ case (pay-as-you-go)</span></div>
+      <div class="methods">
+        <span class="method-tag">Aadhaar eKYC</span>
+        <span class="method-tag">DigiLocker</span>
+        <span class="method-tag">OCR Database</span>
+        <span class="method-tag">Candidate Link Flow</span>
+      </div>
+      <div class="pros-cons">
+        <div class="pc-section pros">
+          <h5>Pros</h5>
+          <ul class="pc-list">
+            <li>Lowest per-case cost in market</li>
+            <li>Pay-as-you-go, no commitment</li>
+            <li>Backed by OnGrid (10+ yrs BGV)</li>
+            <li>external_id = your Case ID</li>
+          </ul>
+        </div>
+        <div class="pc-section cons">
+          <h5>Cons</h5>
+          <ul class="pc-list">
+            <li>Pure API — dev resources needed</li>
+            <li>No ops dashboard included</li>
+            <li>GPS + iOS web — needs confirmation</li>
+          </ul>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-item">🌐 <a href="https://gridlines.io" target="_blank">gridlines.io</a></div>
+        <div class="contact-item">✉️ <a href="mailto:sales@gridlines.io">sales@gridlines.io</a></div>
+      </div>
+    </div>
+
+    <!-- SpringVerify -->
+    <div class="vendor-card">
+      <div class="vendor-logo-row">
+        <div class="vendor-icon" style="background:rgba(240,165,0,0.1);color:var(--gold);">SV</div>
+        <div>
+          <div class="vendor-name">SpringVerify</div>
+          <div class="vendor-sub">Modern BGV portal · WhatsApp-based flow</div>
+        </div>
+      </div>
+      <div class="price-badge" style="border-color:rgba(240,165,0,0.25);color:var(--gold);background:rgba(240,165,0,0.08)">₹199 – ₹399 <span style="font-weight:400;color:var(--muted)">/ address check</span></div>
+      <div class="methods">
+        <span class="method-tag">Aadhaar OTP</span>
+        <span class="method-tag">WhatsApp Link (SpringScan)</span>
+        <span class="method-tag">Document OCR</span>
+        <span class="method-tag">Database Check</span>
+      </div>
+      <div class="pros-cons">
+        <div class="pc-section pros">
+          <h5>Pros</h5>
+          <ul class="pc-list">
+            <li>Ready portal — no dev needed</li>
+            <li>WhatsApp candidate flow</li>
+            <li>HRMS integrations</li>
+            <li>Transparent pricing</li>
+          </ul>
+        </div>
+        <div class="pc-section cons">
+          <h5>Cons</h5>
+          <ul class="pc-list">
+            <li>No GPS capture in digital flow</li>
+            <li>Higher per-check cost</li>
+            <li>Custom Case ID — confirm</li>
+          </ul>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-item">🌐 <a href="https://in.springverify.com" target="_blank">in.springverify.com</a></div>
+        <div class="contact-item">📞 <span>+91-80-4569-9800</span></div>
+        <div class="contact-item">✉️ <a href="mailto:support@springverify.com">support@springverify.com</a></div>
+      </div>
+    </div>
+
+    <!-- Setu -->
+    <div class="vendor-card">
+      <div class="vendor-logo-row">
+        <div class="vendor-icon" style="background:rgba(255,87,87,0.1);color:var(--red);">SE</div>
+        <div>
+          <div class="vendor-name">Setu</div>
+          <div class="vendor-sub">by Pine Labs · Aadhaar OKYC specialist</div>
+        </div>
+      </div>
+      <div class="price-badge">₹25 – ₹80 <span style="font-weight:400;color:var(--muted)">/ Aadhaar OTP check</span></div>
+      <div class="methods">
+        <span class="method-tag">Aadhaar OKYC</span>
+        <span class="method-tag">DigiLocker</span>
+        <span class="method-tag">XML eKYC</span>
+      </div>
+      <div class="pros-cons">
+        <div class="pc-section pros">
+          <h5>Pros</h5>
+          <ul class="pc-list">
+            <li>UIDAI-direct — most accurate source</li>
+            <li>Cheapest Aadhaar OTP in market</li>
+            <li>Excellent dev docs + sandbox</li>
+          </ul>
+        </div>
+        <div class="pc-section cons">
+          <h5>Cons</h5>
+          <ul class="pc-list">
+            <li>No GPS or house photo</li>
+            <li>Needs Aadhaar-linked mobile</li>
+            <li>Not a BGV workflow platform</li>
+          </ul>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-item">🌐 <a href="https://setu.co" target="_blank">setu.co</a></div>
+        <div class="contact-item">✉️ <a href="mailto:support@setu.co">support@setu.co</a></div>
+      </div>
+    </div>
+
+    <!-- Quinfy -->
+    <div class="vendor-card">
+      <div class="vendor-logo-row">
+        <div class="vendor-icon" style="background:rgba(139,163,199,0.1);color:var(--muted);">QF</div>
+        <div>
+          <div class="vendor-name">Quinfy</div>
+          <div class="vendor-sub">AI-powered BGV · Blockchain credentials</div>
+        </div>
+      </div>
+      <div class="price-badge">₹100 – ₹350 <span style="font-weight:400;color:var(--muted)">/ case</span></div>
+      <div class="methods">
+        <span class="method-tag">AI Automated</span>
+        <span class="method-tag">QuinAI Flow</span>
+        <span class="method-tag">QuinBlock (Blockchain)</span>
+      </div>
+      <div class="pros-cons">
+        <div class="pc-section pros">
+          <h5>Pros</h5>
+          <ul class="pc-list">
+            <li>Cost-effective at volume</li>
+            <li>Blockchain-backed credentials</li>
+            <li>Custom role-based packages</li>
+          </ul>
+        </div>
+        <div class="pc-section cons">
+          <h5>Cons</h5>
+          <ul class="pc-list">
+            <li>Smaller network, less enterprise trust</li>
+            <li>GPS + photo — needs confirmation</li>
+            <li>Inconsistent physical TAT</li>
+          </ul>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-item">🌐 <a href="https://quinfy.com" target="_blank">quinfy.com</a></div>
+        <div class="contact-item">📞 <span>+91-20-6731-0000</span></div>
+        <div class="contact-item">✉️ <a href="mailto:contact@quinfy.com">contact@quinfy.com</a></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- MATRIX -->
+<section id="matrix">
+  <div class="section-tag">// feature comparison</div>
+  <h2 class="section-title">Workflow Requirement Matrix</h2>
+  <p class="section-sub">How each vendor maps to our exact operational requirements. Only top four evaluated for full workflow fit.</p>
+
+  <div class="matrix-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Requirement</th>
+          <th>AuthBridge</th>
+          <th>IDfy</th>
+          <th>Gridlines</th>
+          <th>SpringVerify</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Pass our own Case ID</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-par">⚡ Confirm</td></tr>
+        <tr><td>Candidate name + email</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td></tr>
+        <tr><td>Permanent + Current address (dual)</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-par">⚡ Confirm</td></tr>
+        <tr><td>Link + OTP sent to candidate email</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td></tr>
+        <tr><td>iPhone web app (no app download)</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-par">⚡ Confirm</td><td class="cell-yes">✓ Yes</td></tr>
+        <tr><td>Android native / web app</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-par">⚡ Confirm</td><td class="cell-yes">✓ Yes</td></tr>
+        <tr><td>Live house photo capture</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-par">⚡ Confirm</td><td class="cell-par">⚡ Partial</td></tr>
+        <tr><td>GPS auto-captured on submit</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-par">⚡ Confirm</td><td class="cell-no">✗ No</td></tr>
+        <tr><td>Case ID returned in webhook</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td></tr>
+        <tr><td>DPDP Act / ISO compliant</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td><td class="cell-yes">✓ Yes</td></tr>
+        <tr><td>Cost per case (digital)</td><td class="cell-cost">₹150–₹400</td><td class="cell-cost">₹50–₹250</td><td class="cell-cost">₹30–₹150</td><td class="cell-cost">₹199–₹399</td></tr>
+        <tr><td>Overall workflow fit</td><td class="cell-fit-great">⭐ Excellent</td><td class="cell-fit-great">⭐ Very Good</td><td class="cell-fit-good">✔ Good</td><td class="cell-fit-part">⚠ Partial</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1.5rem;font-size:0.8rem;color:var(--muted)">
+    <span style="color:var(--green);font-weight:600">✓ Yes</span> = Confirmed supported &nbsp;&nbsp;
+    <span style="color:var(--amber);font-weight:600">⚡ Confirm</span> = Needs confirmation in demo &nbsp;&nbsp;
+    <span style="color:var(--red);font-weight:600">✗ No</span> = Not supported
+  </div>
+</section>
+
+<!-- DUE DILIGENCE -->
+<section id="questions">
+  <div class="section-tag">// due diligence</div>
+  <h2 class="section-title">10 Questions to Ask Every Vendor</h2>
+  <p class="section-sub">Ask these in your demo before signing any contract. Get written confirmation on all of them.</p>
+
+  <div class="q-grid">
+    <div class="q-card"><div class="q-num">01</div><p>Does your candidate verification link work as a <strong>web app on iPhone Safari</strong> without requiring any app download?</p></div>
+    <div class="q-card"><div class="q-num">02</div><p>When I pass my own Case ID as <code style="font-family:JetBrains Mono;color:#3D85F0">reference_id</code>, does that exact ID come back in your <strong>webhook payload</strong> when the case closes?</p></div>
+    <div class="q-card"><div class="q-num">03</div><p>For <strong>dual-address verification</strong> (permanent + current), does the candidate get one link to complete both, or two separate links?</p></div>
+    <div class="q-card"><div class="q-num">04</div><p>Is GPS capture <strong>mandatory</strong>? What happens if the candidate's location is turned off on their device?</p></div>
+    <div class="q-card"><div class="q-num">05</div><p>Are you <strong>UIDAI-authorised</strong> directly or through a licensed ASA/AUA? Provide your UIDAI certificate.</p></div>
+    <div class="q-card"><div class="q-num">06</div><p>What is your SLA for TAT on digital address verification for candidates in <strong>Tamil Nadu</strong>?</p></div>
+    <div class="q-card"><div class="q-num">07</div><p>Do you have a <strong>BGV company / partner pricing tier</strong>? What is the minimum monthly volume commitment?</p></div>
+    <div class="q-card"><div class="q-num">08</div><p>Can we run a <strong>pilot batch of 20–50 cases</strong> before committing to a formal contract?</p></div>
+    <div class="q-card"><div class="q-num">09</div><p>How long is candidate data stored, and how is it protected under the <strong>DPDP Act 2023</strong>?</p></div>
+    <div class="q-card"><div class="q-num">10</div><p>What is your <strong>uptime SLA</strong>? Share last 12 months' availability data for the address verification API.</p></div>
+  </div>
+</section>
+
+<!-- CONTACTS -->
+<section id="contact">
+  <div class="section-tag">// get in touch</div>
+  <h2 class="section-title">Vendor Contact Directory</h2>
+  <p class="section-sub">Reach out to these vendors — mention you are a BGV company replacing an internal tool and ask for partner/API pricing.</p>
+
+  <div class="contact-grid">
+
+    <div class="contact-card primary">
+      <span class="cc-badge prim">Primary Pick</span>
+      <h3>AuthBridge</h3>
+      <div class="cc-sub">Footprints — Digital Address Verification</div>
+      <div class="cc-detail"><strong>Phone:</strong> +91-124-4881900</div>
+      <div class="cc-detail"><strong>Email:</strong> <a href="mailto:sales@authbridge.com">sales@authbridge.com</a></div>
+      <div class="cc-detail"><strong>Product:</strong> <a href="https://authbridge.com/products/onboarding-verification/footprints" target="_blank">authbridge.com → Footprints</a></div>
+      <div class="cc-detail" style="margin-top:0.8rem;font-size:0.75rem;color:var(--muted)">💡 Mention: BGV company, need GPS + house photo, passing our own Case ID</div>
+    </div>
+
+    <div class="contact-card">
+      <span class="cc-badge sec">Secondary</span>
+      <h3>IDfy</h3>
+      <div class="cc-sub">Digital Address Verification API</div>
+      <div class="cc-detail"><strong>Phone:</strong> +91-22-4897-5151</div>
+      <div class="cc-detail"><strong>Email:</strong> <a href="mailto:sales@idfy.com">sales@idfy.com</a></div>
+      <div class="cc-detail"><strong>BGV API Docs:</strong> <a href="https://bgv-api-docs.idfy.com" target="_blank">bgv-api-docs.idfy.com</a></div>
+      <div class="cc-detail"><strong>Contact Form:</strong> <a href="https://idfy.com/idfy-contact-us/" target="_blank">idfy.com/contact-us</a></div>
+    </div>
+
+    <div class="contact-card">
+      <span class="cc-badge sec">High Volume</span>
+      <h3>Gridlines (OnGrid)</h3>
+      <div class="cc-sub">API-first · Pay-as-you-go · Lowest cost</div>
+      <div class="cc-detail"><strong>Email:</strong> <a href="mailto:sales@gridlines.io">sales@gridlines.io</a></div>
+      <div class="cc-detail"><strong>Website:</strong> <a href="https://gridlines.io" target="_blank">gridlines.io</a></div>
+      <div class="cc-detail"><strong>Contact:</strong> <a href="https://gridlines.io/contact-us" target="_blank">gridlines.io/contact-us</a></div>
+    </div>
+
+    <div class="contact-card">
+      <span class="cc-badge alt">Alternate</span>
+      <h3>SpringVerify</h3>
+      <div class="cc-sub">BGV portal · WhatsApp + email link</div>
+      <div class="cc-detail"><strong>Phone:</strong> +91-80-4569-9800</div>
+      <div class="cc-detail"><strong>Email:</strong> <a href="mailto:support@springverify.com">support@springverify.com</a></div>
+      <div class="cc-detail"><strong>Website:</strong> <a href="https://in.springverify.com" target="_blank">in.springverify.com</a></div>
+    </div>
+
+    <div class="contact-card">
+      <span class="cc-badge alt">Alternate</span>
+      <h3>Setu (Pine Labs)</h3>
+      <div class="cc-sub">Aadhaar OKYC specialist · Lowest Aadhaar cost</div>
+      <div class="cc-detail"><strong>Email:</strong> <a href="mailto:support@setu.co">support@setu.co</a></div>
+      <div class="cc-detail"><strong>Website:</strong> <a href="https://setu.co/data/kyc/aadhaar" target="_blank">setu.co/kyc/aadhaar</a></div>
+    </div>
+
+    <div class="contact-card">
+      <span class="cc-badge alt">Alternate</span>
+      <h3>Quinfy</h3>
+      <div class="cc-sub">AI-powered · Blockchain credentials</div>
+      <div class="cc-detail"><strong>Phone:</strong> +91-20-6731-0000</div>
+      <div class="cc-detail"><strong>Email:</strong> <a href="mailto:contact@quinfy.com">contact@quinfy.com</a></div>
+      <div class="cc-detail"><strong>Website:</strong> <a href="https://quinfy.com" target="_blank">quinfy.com</a></div>
+    </div>
+
+  </div>
+
+  <!-- Action Steps -->
+  <div style="margin-top:3rem;background:rgba(29,107,230,0.06);border:1px solid rgba(29,107,230,0.2);border-radius:16px;padding:2.5rem;">
+    <div class="section-tag" style="margin-bottom:0.5rem">// action plan</div>
+    <h3 style="font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:1.5rem">Immediate Next Steps</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+        <div style="font-size:1.4rem;margin-bottom:0.6rem">📧</div>
+        <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Week 1</div>
+        <div style="font-size:0.8rem;color:var(--muted)">Email AuthBridge + IDfy. Ask for BGV partner pricing and book a live demo.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+        <div style="font-size:1.4rem;margin-bottom:0.6rem">🧪</div>
+        <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Week 2–3</div>
+        <div style="font-size:0.8rem;color:var(--muted)">Run a pilot batch of 20–50 cases. Verify: GPS, house photo, iPhone web app, custom Case ID in webhook.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+        <div style="font-size:1.4rem;margin-bottom:0.6rem">📋</div>
+        <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Week 4</div>
+        <div style="font-size:0.8rem;color:var(--muted)">Finalise vendor. Sign contract. Get DPDP Act + UIDAI compliance docs.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+        <div style="font-size:1.4rem;margin-bottom:0.6rem">🔌</div>
+        <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Week 5–8</div>
+        <div style="font-size:0.8rem;color:var(--muted)">Integrate vendor API into our application. Configure webhook → Case ID mapping. UAT + go live.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>
+    <div class="logo" style="margin-bottom:0.4rem">BGV <span>·</span> Address<span>Verify</span></div>
+    <p>Internal Vendor Assessment Report · May 2026 · Confidential</p>
+  </div>
+  <p>All pricing is indicative. Request a demo before committing to any vendor.</p>
+</footer>
+
+</body>
+</html>
